@@ -437,14 +437,12 @@ uwfmgr overlay set-warningthreshold 20000
 uwfmgr.exe volume protect c:
 uwfmgr.exe filter enable
 ```
-
+## Github [link](https://github.com/vijaidjearam/unifiedwritefilter/tree/main) for excpetions of antivirus
 ## License
 
 This tool is provided as-is for monitoring Windows Unified Write Filter status. Use at your own discretion.
 
-## Credits
 
-Developed for system administrators managing Windows devices with UWF enabled.
 
 ---
 
