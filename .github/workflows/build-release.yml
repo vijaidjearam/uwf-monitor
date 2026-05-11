@@ -1,0 +1,99 @@
+name: Build and Release UWF Monitor
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'uwf_tray_monitor.py'
+      - 'requirements.txt'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed --noconsole --name UWF_Monitor uwf_tray_monitor.py
+        
+    - name: Get version
+      id: get_version
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=v$(date +'%Y.%m.%d')-build${{ github.run_number }}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        release_name: UWF Monitor ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## UWF Monitor Release
+          
+          ### Changes
+          - Automated build from commit ${{ github.sha }}
+          
+          ### Installation
+          1. Download `UWF_Monitor.exe`
+          2. Run as Administrator
+          3. Optional: Add to Windows Startup folder
+          
+          ### System Requirements
+          - Windows 10/11
+          - UWF (Unified Write Filter) enabled
+          - Administrator privileges
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease || false }}
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/UWF_Monitor.exe
+        asset_name: UWF_Monitor.exe
+        asset_content_type: application/octet-stream
+        
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: UWF_Monitor-${{ steps.get_version.outputs.VERSION }}
+        path: ./dist/UWF_Monitor.exe
+        retention-days: 30
